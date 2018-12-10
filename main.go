@@ -28,7 +28,7 @@ var (
 		Help: "Count of test HTTP requests",
 	}, []string{"code", "method"})
 
-	testMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+	testMetric = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "test_metric",
 		Help: "Shows test metric gauge",
 	})
