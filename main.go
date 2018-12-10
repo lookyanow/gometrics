@@ -22,6 +22,16 @@ var (
 		Name: "http_requests_total",
 		Help: "Count of all HTTP requests",
 	}, []string{"code", "method"})
+
+	httpTestRequestTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_test_request_total",
+		Help: "Count of test HTTP requests",
+	}, []string{"code", "method"})
+
+	testMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "test_metric",
+		Help: "Shows test metric gauge",
+	})
 )
 
 func main() {
@@ -32,17 +42,30 @@ func main() {
 
 	r := prometheus.NewRegistry()
 	r.MustRegister(httpRequestsTotal)
+	r.MustRegister(httpTestRequestTotal)
 	r.MustRegister(version)
+
+	r.MustRegister(testMetric)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Hello from example application.\n"))
 	})
+
 	notfound := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
+	test := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Test message\n"))
+		headerType := r.Header.Get("Type")
+		if headerType == "test" {
+			testMetric.Inc()
+		}
+	})
 	http.Handle("/", promhttp.InstrumentHandlerCounter(httpRequestsTotal, handler))
 	http.Handle("/err", promhttp.InstrumentHandlerCounter(httpRequestsTotal, notfound))
+	http.Handle("/test", promhttp.InstrumentHandlerCounter(httpTestRequestTotal, test))
 
 	http.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
 	log.Fatal(http.ListenAndServe(bind, nil))
